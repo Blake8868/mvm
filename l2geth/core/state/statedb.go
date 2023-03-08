@@ -226,6 +226,33 @@ func (s *StateDB) SubRefund(gas uint64) {
 	s.refund -= gas
 }
 
+// AddRefund adds gas to the refund counter
+// refund counter will not change when contract address is coinbase and isForked
+func (s *StateDB) AddRefundWithFork(gas uint64, isForked bool, isCoinbaseAddress bool) {
+	s.journal.append(refundChange{prev: s.refund})
+	if !isForked || !isCoinbaseAddress {
+		s.refund += gas
+	}
+}
+
+// SubRefund removes gas from the refund counter.
+// This method will not panic if the refund counter goes below zero and isForked
+// refund counter will not change when contract address is coinbase and isForked
+func (s *StateDB) SubRefundWithFork(gas uint64, isForked bool, isCoinbaseAddress bool) {
+	s.journal.append(refundChange{prev: s.refund})
+	if gas > s.refund {
+		if !isForked {
+			panic(fmt.Sprintf("Refund counter below zero (gas: %d > refund: %d)", gas, s.refund))
+		}
+		if !isCoinbaseAddress {
+			s.refund = 0
+		}
+	}
+	if !isForked || !isCoinbaseAddress {
+		s.refund -= gas
+	}
+}
+
 // Exist reports whether the given account address exists in the state.
 // Notably this also returns true for suicided accounts.
 func (s *StateDB) Exist(addr common.Address) bool {

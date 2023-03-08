@@ -232,11 +232,19 @@ var (
 	// OpKovanChainID is the ID of Optimism's Kovan testnet chain.
 	OpKovanChainID = big.NewInt(69)
 
+	AndromedaGoerliChainID = big.NewInt(599)
+
 	// AndromedaMainnetSDUpdateForkNum is the height at which the SD update fork activates on Mainnet.
 	AndromedaMainnetSDUpdateForkNum = big.NewInt(750000)
 
 	// OpKovanSDUpdateForkNum is the height at which the SD update fork activates on Kovan.
 	OpKovanSDUpdateForkNum = big.NewInt(1094820)
+
+	// AndromedaMainnetRFDUpdateForkNum is the height at which the refund(RFD) update fork activates on Mainnet.
+	AndromedaMainnetRFDUpdateForkNum = big.NewInt(5100000)
+
+	// AndromedaGoerliRFDUpdateForkNum is the height at which the refund(RFD) update fork activates on Goerli.
+	AndromedaGoerliRFDUpdateForkNum = big.NewInt(800000)
 )
 
 // TrustedCheckpoint represents a set of post-processed trie roots (CHT and
@@ -432,6 +440,17 @@ func (c *ChainConfig) IsSDUpdate(num *big.Int) bool {
 	}
 	if c.ChainID.Cmp(OpKovanChainID) == 0 {
 		return isForked(OpKovanSDUpdateForkNum, num)
+	}
+	return true
+}
+
+// IsRFDUpdate returns whether num represents a block number after the refund(RFD) update fork
+func (c *ChainConfig) IsRFDUpdate(num *big.Int) bool {
+	if c.ChainID.Cmp(MainnetChainID) == 0 {
+		return isForked(AndromedaMainnetRFDUpdateForkNum, num)
+	}
+	if c.ChainID.Cmp(AndromedaGoerliChainID) == 0 {
+		return isForked(AndromedaGoerliRFDUpdateForkNum, num)
 	}
 	return true
 }

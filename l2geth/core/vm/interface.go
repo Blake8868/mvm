@@ -41,6 +41,8 @@ type StateDB interface {
 
 	AddRefund(uint64)
 	SubRefund(uint64)
+	AddRefundWithFork(uint64, bool, bool)
+	SubRefundWithFork(uint64, bool, bool)
 	GetRefund() uint64
 
 	GetCommittedState(common.Address, common.Hash) common.Hash

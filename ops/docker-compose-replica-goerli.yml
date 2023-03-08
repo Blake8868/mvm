@@ -1,0 +1,69 @@
+# TODO: Prefix all env vars with service name
+# TODO: Allow specifing the image tag to use
+version: "3"
+
+services:
+  dtl:
+    image: ethereumoptimism/data-transport-layer
+    build:
+      context: ..
+      dockerfile: ./ops/docker/Dockerfile.data-transport-layer
+    # override with the dtl script and the env vars required for it
+    entrypoint: ./dtl.sh
+    env_file:
+      -  ./envs/dtl.env
+    # set the rest of the env vars for the network whcih do not
+    # depend on the docker-compose setup
+    environment:
+        # used for setting the address manager address
+        URL: https://metis-us-east-2-goerli.s3.us-east-2.amazonaws.com/addresses.json
+        # connect to the 2 layers
+        DATA_TRANSPORT_LAYER__L1_RPC_ENDPOINT: 'https://eth-goerli.g.alchemy.com/v2/d-O9XzEiBLJ7B3HN7Vp-v5A1Q_z38n8L' # replace YOUR_RINKEBY_TOKEN to your rinkeby token
+        DATA_TRANSPORT_LAYER__L2_RPC_ENDPOINT: 'https://goerli.gateway.metisdevops.link'
+        DATA_TRANSPORT_LAYER__SYNC_FROM_L1: 'false'
+        DATA_TRANSPORT_LAYER__SYNC_FROM_L2: 'true'
+        DATA_TRANSPORT_LAYER__L2_CHAIN_ID: 599
+        DATA_TRANSPORT_LAYER__TRANSACTIONS_PER_POLLING_INTERVAL: 1000
+        DATA_TRANSPORT_LAYER__CONFIRMATIONS: 0
+        DATA_TRANSPORT_LAYER__POLLING_INTERVAL: 1000
+        DATA_TRANSPORT_LAYER__LOGS_PER_POLLING_INTERVAL: 1000
+        DATA_TRANSPORT_LAYER__DANGEROUSLY_CATCH_ALL_ERRORS: 'true'
+        DATA_TRANSPORT_LAYER__SERVER_HOSTNAME: "0.0.0.0"
+    ports:
+      - ${DTL_PORT:-7878}:7878
+    volumes:
+      - /home/ubuntu/environment/z_chaindata/599/dtl:/data
+    restart: on-failure
+
+  replica:
+    image: ethereumoptimism/l2geth
+    # deploy:
+    #   replicas: 0
+    build:
+      context: ..
+      dockerfile: ./ops/docker/Dockerfile.geth
+    entrypoint: sh ./geth.sh
+    env_file:
+      - ./envs/geth.env
+    environment:
+        ETH1_HTTP: 'https://eth-goerli.g.alchemy.com/v2/d-O9XzEiBLJ7B3HN7Vp-v5A1Q_z38n8L' # replace YOUR_RINKEBY_TOKEN to your rinkeby token
+        ROLLUP_STATE_DUMP_PATH: 'https://metis-us-east-2-goerli.s3.us-east-2.amazonaws.com/state-dump.latest.json'
+        ROLLUP_CLIENT_HTTP: 'http://dtl:7878'
+        ROLLUP_BACKEND: 'l2'
+        CHAIN_ID: 599
+        NETWORK_ID: 599
+        ETH1_CTC_DEPLOYMENT_HEIGHT: 7489400
+        RETRIES: 60
+        ROLLUP_VERIFIER_ENABLE: 'false'
+        BLOCK_SIGNER_KEY: "6587ae678cf4fc9a33000cdbf9f35226b71dcc6a4684a31203241f9bcfd55d27"
+        BLOCK_SIGNER_ADDRESS: "0x00000398232E2064F896018496b4b44b3D62751F"
+        # L2_URL: https://goerli.gateway.metisdevops.link
+        # SEQUENCER_CLIENT_HTTP: https://goerli.gateway.metisdevops.link
+        TARGET_GAS_LIMIT: 9000000
+        RPC_GAS_CAP: 11000000
+    ports:
+      - ${REPLICA_HTTP_PORT:-8555}:8545
+      - ${REPLICA_WS_PORT:-8556}:8546
+    volumes:
+      - /home/ubuntu/environment/z_chaindata/599/l2geth:/root/.ethereum
+    restart: on-failure

@@ -22,6 +22,8 @@ import (
 	"github.com/ethereum-optimism/optimism/l2geth/common"
 	"github.com/ethereum-optimism/optimism/l2geth/common/math"
 	"github.com/ethereum-optimism/optimism/l2geth/params"
+	"github.com/ethereum-optimism/optimism/l2geth/rollup/dump"
+	"github.com/ethereum-optimism/optimism/l2geth/rollup/rcfg"
 )
 
 // These functions are modified to work without the access list logic.
@@ -95,7 +97,10 @@ func makeSelfdestructGasFnOptimism(refundsEnabled bool) gasFunc {
 			gas += params.CreateBySelfdestructGas
 		}
 		if refundsEnabled && !evm.StateDB.HasSuicided(contract.Address()) {
-			evm.StateDB.AddRefund(params.SelfdestructRefundGas)
+			isFork := rcfg.UsingOVM && evm.chainConfig.IsRFDUpdate(evm.BlockNumber)
+			isCoinbaseAddress := rcfg.UsingOVM && dump.OvmEthAddress == contract.Address()
+			// evm.StateDB.AddRefund(params.SelfdestructRefundGas)
+			evm.StateDB.AddRefundWithFork(params.SelfdestructRefundGas, isFork, isCoinbaseAddress)
 		}
 		return gas, nil
 	}
